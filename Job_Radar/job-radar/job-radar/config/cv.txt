@@ -1,0 +1,56 @@
+MOHAMMAD SOHEILI
+Milan, Italy | moso.soheili@gmail.com | +39 351 749 7671 | linkedin.com/in/mohammad-soheili
+
+SUMMARY
+Climate and Sustainability Analyst specialising in GHG emissions quantification, Life Cycle Assessment, and sustainability data systems. Experienced in Scope 1-3 carbon accounting, ISO 14040/44-compliant LCA modelling, and building monitoring tools that turn complex environmental data into operational decisions. Committed to low-carbon, resilient infrastructure outcomes aligned with the Paris Agreement and 2030 climate commitments.
+
+EXPERIENCE
+
+HSE Specialist — IKEA (April 2026 - Present, Piacenza, Italy)
+Built Power Query automation to track medical surveillance schedules and near-miss incident data, replacing manual Excel processes and accelerating reporting cycles. Designed a Google Apps Script HTML application to monitor mandatory HSE training completion per employee across the warehouse. Supporting DVR preparation, workplace inspections, and prevention measure verification under D.Lgs. 81/08 and ISO 45001. Managing DUVRI and contractor access control.
+
+LCA and Sustainability Research Analyst — ISMER Chemistry Lab, University of Milan (June 2024 - June 2025, Milan, Italy)
+Modelled baseline and carbon capture scenarios in SimaPro (IPCC 2021, EF 3.0), identifying emission hotspots accounting for 65% of total emissions — demonstrating 79% carbon capture efficiency and 30% total carbon footprint reduction. Executed Scope 1, 2 & 3 GHG accounting per GHG Protocol; developed Product Carbon Footprint reports for the ceramic industry ensuring compliance with ISO 14025/14067. Resolved 15-25% LCI data gaps using R statistical imputation (MICE, Random Forest) and Power Query automation; verified against ISO 14040/44 standards. Applied EF 3.0 across 16 environmental categories, identifying a 47% increase in water consumption as a critical environmental trade-off against net climate benefits.
+
+Visiting Project Student — Sorbonne Université (September 2024 - February 2025, Paris, France)
+Participated in the "Ecological Challenges from a Multidisciplinary Perspective" seminar series, organised by Université Paris Cité's Earth Politics Centre and Sorbonne's Institute for Environmental Transition. Compiled and visualized collected data from the Paris 10th arrondissement foodscape study by leveraging spatial analysis methods to support research conclusions.
+
+Environmental Project Specialist — Urban Innovation Center of Mashhad (January 2019 - July 2021, Mashhad, Iran)
+Co-authored ESG proposals securing funding for 8+ annual sustainability initiatives with NGOs and industry startups. Streamlined reporting workflows, reducing approval stages from 6 to 3 and cutting project delivery timelines by 60%; achieved 15% annual budget optimisation. Engineered automated Power BI and Excel dashboards for 9 remote centres, reducing manual reporting time and improving data accuracy. Conducted ESG gap analyses across 9 centres, setting strategic priorities for system-wide efficiency improvements. Collaborated with a 5-person team and 9 external partners aligned with corporate sustainability targets.
+
+Environmental Engineering Assistant — Modirab Engineering Company (January 2017 - December 2018, Mashhad, Iran)
+Assisted senior engineers in conducting ISO 14001 environmental compliance checks at manufacturing facilities, supporting gap identification and corrective action documentation. Contributed to environmental data collection and analysis to support emissions reduction reporting aligned with regulatory requirements. Gained hands-on experience in environmental site assessments, waste management audits, and operational environmental monitoring.
+
+EDUCATION
+
+M.Sc. in Environmental Change and Global Sustainability — University of Milan (2025, 104/110 GPA)
+Thesis: LCA of Amine-Based Carbon Capture Technology – Italian Ceramic Industry (SimaPro, Ecoinvent v3, IPCC 2021, EF 3.0, Monte Carlo simulations).
+Erasmus: Sorbonne Université, France (GPA 30/30) — Multidisciplinary ecological research, urban sustainability, Earth politics.
+Erasmus: Universität Bonn, Germany (GPA 30/30) — Climate impact modelling (Maxent, RCP scenarios), statistical modelling (ANOVA, regression), data visualisation in R.
+
+B.Sc. in Water and Environmental Engineering — Ferdowsi University of Mashhad (2016, 17/20 GPA)
+Ranked Top 2% of 500,000+ national university entrance exam participants.
+
+SKILLS
+LCA & Climate: GHG Protocol (Scope 1-3), LCA (ISO 14040/44), SimaPro, OpenLCA, Climate Risk Screening, Carbon Footprint (ISO 14067).
+ESG Frameworks: GRI, CDP, EU Taxonomy, TCFD, CSRD/ESRS, ISO 14025, ISO 45001, ISO 14001.
+Data & Software: R (MICE / dplyr / ggplot2 / ANOVA / regression), QGIS, Power BI, Google Apps Script, Jupyter.
+Microsoft Office: Power Query, DAX, Goal Seek, Pivot Tables, INDEX+MATCH, SUMIFS.
+HSE & Compliance: DVR, DUVRI, D.Lgs. 81/08, Incident Analysis, Near-Miss Reporting.
+
+LANGUAGES
+Persian (Native), English (C1), Italian (B2).
+
+CERTIFICATIONS
+Sustainable and ESG Supply Chains — Project Management Institute (PMI).
+Understanding the Corporate Sustainability Reporting Directive (CSRD) — LinkedIn Learning.
+Specific Worker Safety Training For Medium Risk Class Sectors — Confindustria Piacenza.
+Introduction to LEED Credentialing — LinkedIn Learning.
+Power BI Data Visualization and Dashboard Tips, Tricks, and Techniques — LinkedIn Learning.
+Warehouse Operation, Logistics and Supply Chain — Forma.Temp and Randstad Enterprise Italia.
+
+AWARDS
+3 Years Merit Scholarship — University of Milan.
+Erasmus+ Scholarship — The European Commission.
+3 Consecutive Years Dean's Award — Ferdowsi University of Mashhad.
+1st Place of Academic Startup Competition — Ministry of Education (Iran).

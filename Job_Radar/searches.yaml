@@ -1,0 +1,67 @@
+# Job radar search configuration
+# -----------------------------------------------------------------------------
+# Keywords tuned to your CV (HSE + LCA + sustainability + carbon accounting).
+# Adzuna's `what` parameter searches both job titles AND descriptions, so a
+# query like "SimaPro" will surface jobs that mention SimaPro anywhere — even
+# if the title is something generic like "Project Engineer". This catches the
+# "wrong title, right content" case you flagged.
+#
+# Adzuna free tier is around 1,000 calls/month. Current config:
+#   Italy (12 queries) + Germany (4) + Netherlands (3) = 19 calls/run
+#   × 30 days = ~570 calls/month — comfortably inside the budget.
+
+cv_file: config/cv.txt
+
+# How many days back to look on Adzuna. 7 = past week is a sweet spot:
+# you catch fresh listings without flooding the sheet on day 1.
+max_days_old: 7
+
+# Minimum fit score (0-100) to archive. Below this we discard.
+# Start at 35; tune up if the sheet has too much noise, down if you're
+# missing good roles.
+min_fit_score: 35
+
+# Adzuna searches — one block per country. Free tier API key required.
+adzuna_searches:
+  - country: it  # Italy — your home market, biggest query list
+    where: ""    # whole country
+    queries:
+      # Role-based (your stated keywords)
+      - "HSE specialist"
+      - "EHS specialist"
+      - "safety specialist"
+      - "sustainability analyst"
+      - "sustainability specialist"
+      - "LCA analyst"
+      - "carbon accounting"
+      - "ESG analyst"
+      - "environmental engineer"
+      # Skill-based (catches jobs with non-obvious titles)
+      - "SimaPro"
+      - "life cycle assessment"
+      - "GHG Protocol"
+
+  - country: de  # Germany — strong LCA/sustainability hiring market
+    where: ""
+    queries:
+      - "sustainability analyst"
+      - "LCA analyst"
+      - "carbon accounting"
+      - "SimaPro"
+
+  - country: nl  # Netherlands — English-friendly EU roles
+    where: ""
+    queries:
+      - "sustainability analyst"
+      - "LCA"
+      - "carbon"
+
+# Remotive: remote-only roles, broader pool. No auth needed.
+remotive_queries:
+  - sustainability
+  - carbon
+  - ESG
+  - environmental
+
+# Arbeitnow: no query support (returns latest EU jobs); we filter via fit score.
+arbeitnow_max_pages: 3
