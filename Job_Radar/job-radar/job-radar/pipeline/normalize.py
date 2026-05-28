@@ -13,18 +13,30 @@ import re
 
 @dataclass
 class Job:
-    source: str          # "adzuna" / "arbeitnow" / "remotive"
-    source_id: str       # provider's own id
+    source: str
+    source_id: str
     title: str
     company: str
-    location: str        # plain string
+    location: str
     remote: bool
-    posted_date: str     # ISO date string (YYYY-MM-DD)
-    description: str     # plain text (HTML stripped)
+    posted_date: str
+    description: str
     apply_url: str
     salary: str = ""
-    raw_query: str = ""  # the search query that surfaced this job
+    raw_query: str = ""
     fit_score: float = 0.0
+    seniority: str = ""
+    years_exp: str = ""
+    contract_type: str = ""
+    description_snippet: str = ""
+
+def enrich(job: "Job") -> "Job":
+    """Populate derived fields (seniority, contract_type, snippet) in-place."""
+    job.seniority, job.years_exp = detect_seniority(job.title, job.description)
+    job.contract_type = detect_contract(job.title, job.description)
+    job.description_snippet = job.description[:500].strip()
+    return job
+
 
     def hash_key(self) -> str:
         """Stable dedup hash: company + title + location, normalized."""
@@ -34,6 +46,75 @@ class Job:
             self.location.strip().lower(),
         ])
         return hashlib.md5(key.encode("utf-8")).hexdigest()[:16]
+
+
+import re
+
+# ── Seniority detection ───────────────────────────────────────────────────────
+_SENIOR_TITLE = re.compile(
+    r'\b(senior|sr\.?|lead|principal|head of|manager|director|expert)\b', re.I)
+_JUNIOR_TITLE = re.compile(
+    r'\b(junior|jr\.?|entry.?level|graduate|intern|stage|tirocinio|apprendista)\b', re.I)
+_YEARS_PATTERN = re.compile(
+    r'(\d+)\s*[\+\-–]?\s*(?:to|-|–)\s*(\d+)\s+(?:years?|anni)|'
+    r'(\d+)\s*\+?\s+(?:years?|anni)\s+(?:of\s+)?(?:experience|esperienza)|'
+    r'(?:minimum|almeno|at least|minimo)\s+(\d+)\s+(?:years?|anni)|'
+    r'(\d+)\s*\+\s*(?:years?|anni)',
+    re.I,
+)
+_CONTRACT_PATTERNS = {
+    'Full-time':  re.compile(r'\b(full.?time|tempo pieno|a tempo pieno)\b', re.I),
+    'Part-time':  re.compile(r'\b(part.?time|tempo parziale)\b', re.I),
+    'Contract':   re.compile(r'\b(contract|freelance|contratto a termine|determinato)\b', re.I),
+    'Internship': re.compile(r'\b(intern(ship)?|stage|tirocinio|apprendistato)\b', re.I),
+}
+
+
+def detect_seniority(title: str, description: str) -> tuple[str, str]:
+    """Return (seniority_label, years_exp_string).
+
+    seniority_label: "Junior" | "Mid" | "Senior" | "Unknown"
+    years_exp_string: e.g. "3", "5+", "2-4", "" if not found
+    """
+    blob = f"{title} {description[:3000]}"
+
+    # Extract explicit years from description
+    years_found = []
+    for m in _YEARS_PATTERN.finditer(blob):
+        for g in m.groups():
+            if g and g.isdigit():
+                years_found.append(int(g))
+
+    years_str = ""
+    seniority = "Unknown"
+
+    if years_found:
+        min_y = min(years_found)
+        max_y = max(years_found)
+        years_str = f"{min_y}" if min_y == max_y else f"{min_y}-{max_y}"
+        if max_y <= 2:
+            seniority = "Junior"
+        elif max_y <= 4:
+            seniority = "Mid"
+        else:
+            seniority = "Senior"
+
+    # Title keyword override (stronger signal)
+    if _SENIOR_TITLE.search(title):
+        seniority = "Senior"
+    elif _JUNIOR_TITLE.search(title):
+        seniority = "Junior"
+
+    return seniority, years_str
+
+
+def detect_contract(title: str, description: str) -> str:
+    """Detect contract type from title and description."""
+    blob = f"{title} {description[:2000]}"
+    for label, pattern in _CONTRACT_PATTERNS.items():
+        if pattern.search(blob):
+            return label
+    return ""
 
 
 def _strip_html(text: str) -> str:
