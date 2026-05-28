@@ -8,7 +8,9 @@ Run locally: `python -m pipeline.main`
 Run in CI:   triggered by .github/workflows/daily-scan.yml
 """
 
+import os
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import List
 
@@ -17,6 +19,8 @@ import yaml
 from pipeline.sources import adzuna as adz
 from pipeline.sources import arbeitnow as arb
 from pipeline.sources import remotive as rem
+from pipeline.sources import jsearch as jsc
+from pipeline.sources import apify as apf
 from pipeline import normalize, score, dedupe, sheets
 from pipeline.normalize import Job
 
@@ -30,12 +34,24 @@ def load_config():
     return cfg, cv_text
 
 
+def _jsearch_day() -> bool:
+    """Run JSearch on odd days only → ~15 runs/month → ~225 calls/month.
+    Keeps usage safely inside the 500 calls/month free tier."""
+    return datetime.now(timezone.utc).day % 2 == 1
+
+
+def _apify_day() -> bool:
+    """Run Apify scrapers only on Mondays and Thursdays.
+    2 runs/week × ~$0.15/run = ~$1.20/month — well inside the $5 free credit."""
+    return datetime.now(timezone.utc).weekday() in (0, 3)
+
+
 def collect(cfg) -> List[Job]:
     """Run every configured search and return a flat list of Job objects."""
     out: List[Job] = []
     max_days_old = cfg.get("max_days_old", 7)
 
-    # --- Adzuna ---
+    # --- Adzuna (daily) ---
     if cfg.get("adzuna_searches"):
         print("[adzuna] starting...")
         client = adz.AdzunaClient()
@@ -55,7 +71,7 @@ def collect(cfg) -> List[Job]:
                         out.append(j)
                 print(f"  [adzuna] '{query}' in {country}: {len(raws)} hits")
 
-    # --- Arbeitnow ---
+    # --- Arbeitnow (daily) ---
     print("[arbeitnow] starting...")
     raws = arb.fetch(max_pages=cfg.get("arbeitnow_max_pages", 3))
     for r in raws:
@@ -64,7 +80,7 @@ def collect(cfg) -> List[Job]:
             out.append(j)
     print(f"  [arbeitnow] {len(raws)} hits")
 
-    # --- Remotive ---
+    # --- Remotive (daily) ---
     print("[remotive] starting...")
     for query in cfg.get("remotive_queries", []):
         raws = rem.fetch(search=query)
@@ -73,6 +89,62 @@ def collect(cfg) -> List[Job]:
             if j:
                 out.append(j)
         print(f"  [remotive] '{query}': {len(raws)} hits")
+
+    # --- JSearch / LinkedIn+Indeed+Glassdoor (every other day) ---
+    rapidapi_key = os.environ.get("RAPIDAPI_KEY")
+    if rapidapi_key and _jsearch_day():
+        print("[jsearch] starting (LinkedIn + Indeed + Glassdoor)...")
+        try:
+            js_client = jsc.JSearchClient(api_key=rapidapi_key)
+            for query in cfg.get("jsearch_queries", jsc.DEFAULT_QUERIES):
+                raws = js_client.search(query=query, num_pages=1, date_posted="week")
+                for r in raws:
+                    j = normalize.from_jsearch(r, query=query)
+                    if j:
+                        out.append(j)
+                print(f"  [jsearch] '{query}': {len(raws)} hits")
+        except Exception as e:
+            print(f"[jsearch] failed: {e}")
+    elif not rapidapi_key:
+        print("[jsearch] skipped — RAPIDAPI_KEY not set")
+    else:
+        print("[jsearch] skipped — even day (budget scheduling)")
+
+    # --- Apify / LinkedIn + Indeed deep scrape (Mon + Thu only) ---
+    apify_token = os.environ.get("APIFY_TOKEN")
+    if apify_token and _apify_day():
+        print("[apify] starting (LinkedIn + Indeed deep scrape)...")
+        try:
+            ap_client = apf.ApifyClient(token=apify_token)
+
+            # LinkedIn — all queries in one actor run (cheaper)
+            li_queries = cfg.get("apify_linkedin_queries", [
+                "HSE specialist", "sustainability analyst",
+                "LCA analyst", "carbon accounting", "ESG analyst",
+            ])
+            li_raws = ap_client.scrape_linkedin(
+                queries=li_queries,
+                location="Italy",
+                max_results=30,
+            )
+            for r in li_raws:
+                j = normalize.from_apify_linkedin(r)
+                if j:
+                    out.append(j)
+
+            # Indeed — one query per run (different actor)
+            for q in cfg.get("apify_indeed_queries", ["sustainability Italy", "HSE Italy"]):
+                id_raws = ap_client.scrape_indeed(query=q, location="Italy", max_items=20)
+                for r in id_raws:
+                    j = normalize.from_apify_indeed(r, query=q)
+                    if j:
+                        out.append(j)
+        except Exception as e:
+            print(f"[apify] failed: {e}")
+    elif not apify_token:
+        print("[apify] skipped — APIFY_TOKEN not set (optional)")
+    else:
+        print("[apify] skipped — not Mon/Thu (budget scheduling)")
 
     return out
 

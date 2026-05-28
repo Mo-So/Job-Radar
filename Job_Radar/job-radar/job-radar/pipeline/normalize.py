@@ -112,6 +112,108 @@ def from_arbeitnow(raw: dict) -> Optional[Job]:
         return None
 
 
+def from_jsearch(raw: dict, query: str = "") -> Optional[Job]:
+    """Normalize a JSearch result (covers LinkedIn, Indeed, Glassdoor, etc.).
+
+    JSearch includes a `job_apply_link` (direct apply) and separately
+    `job_google_link` as a fallback. We prefer the direct link.
+    The `employer_name` field maps to company; `job_employment_type` gives
+    contract type. `job_is_remote` is a boolean flag.
+    """
+    try:
+        title = (raw.get("job_title") or "").strip()
+        company = (raw.get("employer_name") or "").strip()
+        city = raw.get("job_city") or ""
+        country = raw.get("job_country") or ""
+        location = ", ".join(filter(None, [city, country])).strip()
+        description = _strip_html(
+            (raw.get("job_description") or "")
+        )
+        apply_url = (
+            raw.get("job_apply_link")
+            or raw.get("job_google_link")
+            or ""
+        )
+        posted_at = raw.get("job_posted_at_datetime_utc") or ""
+        posted_date = posted_at[:10] if posted_at else ""
+        source_platform = raw.get("job_publisher") or "jsearch"
+        salary_min = raw.get("job_min_salary")
+        salary_max = raw.get("job_max_salary")
+        salary = ""
+        if salary_min or salary_max:
+            period = raw.get("job_salary_period") or ""
+            currency = raw.get("job_salary_currency") or ""
+            lo = f"{int(salary_min):,}" if salary_min else "?"
+            hi = f"{int(salary_max):,}" if salary_max else "?"
+            salary = f"{currency} {lo}-{hi} {period}".strip()
+        return Job(
+            source=f"jsearch:{source_platform.lower()}",
+            source_id=str(raw.get("job_id") or ""),
+            title=title,
+            company=company,
+            location=location,
+            remote=bool(raw.get("job_is_remote", False)),
+            posted_date=posted_date,
+            description=description,
+            apply_url=apply_url,
+            salary=salary,
+            raw_query=query,
+        )
+    except Exception as e:
+        print(f"[normalize] jsearch error: {e}")
+        return None
+
+
+def from_apify_linkedin(raw: dict) -> Optional[Job]:
+    """Normalize an Apify LinkedIn Jobs scraper result."""
+    try:
+        location = (raw.get("location") or raw.get("place") or "").strip()
+        description = _strip_html(
+            raw.get("description") or raw.get("descriptionHtml") or ""
+        )
+        return Job(
+            source="apify:linkedin",
+            source_id=str(raw.get("id") or raw.get("jobId") or ""),
+            title=(raw.get("title") or raw.get("jobTitle") or "").strip(),
+            company=(raw.get("companyName") or raw.get("company") or "").strip(),
+            location=location,
+            remote=_detect_remote(location, description),
+            posted_date=(raw.get("postedAt") or "")[:10],
+            description=description,
+            apply_url=raw.get("applyUrl") or raw.get("url") or "",
+            salary=raw.get("salary") or "",
+            raw_query="",
+        )
+    except Exception as e:
+        print(f"[normalize] apify:linkedin error: {e}")
+        return None
+
+
+def from_apify_indeed(raw: dict, query: str = "") -> Optional[Job]:
+    """Normalize an Apify Indeed scraper result."""
+    try:
+        location = (raw.get("location") or "").strip()
+        description = _strip_html(
+            raw.get("description") or raw.get("jobDescription") or ""
+        )
+        return Job(
+            source="apify:indeed",
+            source_id=str(raw.get("id") or raw.get("jobId") or ""),
+            title=(raw.get("positionName") or raw.get("title") or "").strip(),
+            company=(raw.get("company") or "").strip(),
+            location=location,
+            remote=_detect_remote(location, description),
+            posted_date=(raw.get("postedAt") or "")[:10],
+            description=description,
+            apply_url=raw.get("url") or raw.get("externalApplyLink") or "",
+            salary=raw.get("salary") or "",
+            raw_query=query,
+        )
+    except Exception as e:
+        print(f"[normalize] apify:indeed error: {e}")
+        return None
+
+
 def from_remotive(raw: dict, query: str = "") -> Optional[Job]:
     try:
         return Job(
