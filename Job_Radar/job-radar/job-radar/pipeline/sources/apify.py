@@ -21,9 +21,11 @@ from typing import List, Dict, Any
 
 APIFY_BASE = "https://api.apify.com/v2"
 
-# Actor IDs — these are stable Apify actor identifiers
-LINKEDIN_ACTOR = "curious_coder~linkedin-jobs-scraper"
-INDEED_ACTOR = "misceres~indeed-scraper"
+# Verified actor IDs from Apify documentation (May 2026)
+# LinkedIn: https://apify.com/valig/linkedin-jobs-scraper
+# Indeed:   https://apify.com/curious_coder/indeed-scraper
+LINKEDIN_ACTOR = "valig~linkedin-jobs-scraper"
+INDEED_ACTOR = "curious_coder~indeed-scraper"
 
 
 class ApifyClient:
@@ -41,16 +43,12 @@ class ApifyClient:
         input_data: Dict[str, Any],
         timeout_secs: int = 120,
     ) -> List[Dict[str, Any]]:
-        """Synchronously run an Apify actor and return its dataset items.
-
-        Uses the /run-sync-get-dataset-items endpoint so we get results
-        in one HTTP call without polling.
-        """
+        """Synchronously run an Apify actor and return its dataset items."""
         url = f"{APIFY_BASE}/acts/{actor_id}/run-sync-get-dataset-items"
         params = {
             "token": self.token,
             "timeout": timeout_secs,
-            "memory": 256,  # MB — minimum, keeps cost low
+            "memory": 256,
         }
         try:
             r = requests.post(
@@ -59,8 +57,11 @@ class ApifyClient:
                 json=input_data,
                 timeout=timeout_secs + 30,
             )
+            if r.status_code == 400:
+                print(f"[apify] bad request for {actor_id} — check input schema. Response: {r.text[:300]}")
+                return []
             if r.status_code == 402:
-                print(f"[apify] payment required — free credit exhausted for this month")
+                print(f"[apify] free credit exhausted for this month")
                 return []
             if r.status_code == 429:
                 print(f"[apify] rate limited")
@@ -77,21 +78,25 @@ class ApifyClient:
         location: str = "Italy",
         max_results: int = 25,
     ) -> List[Dict[str, Any]]:
-        """Scrape LinkedIn Jobs for each query.
+        """Scrape LinkedIn Jobs using valig~linkedin-jobs-scraper.
 
-        Keeps max_results low to conserve free credits.
-        Runs one actor call per location (passes all queries at once).
+        Input schema: keywords (str), location (str), maxResults (int),
+        datePosted (str: "Past 24 hours" | "Past Week" | "Past Month").
+        One actor call per keyword to keep results focused.
         """
-        input_data = {
-            "searchQueries": queries,
-            "location": location,
-            "maxResults": max_results,
-            "datePosted": "Past Week",
-        }
-        results = self._run_actor(LINKEDIN_ACTOR, input_data)
-        print(f"[apify:linkedin] {len(results)} results for {location}")
-        time.sleep(1)
-        return results
+        all_results = []
+        for keyword in queries:
+            input_data = {
+                "keywords": keyword,
+                "location": location,
+                "maxResults": max_results,
+                "datePosted": "Past Week",
+            }
+            results = self._run_actor(LINKEDIN_ACTOR, input_data)
+            all_results.extend(results)
+            print(f"[apify:linkedin] '{keyword}' in {location}: {len(results)} results")
+            time.sleep(1)
+        return all_results
 
     def scrape_indeed(
         self,
@@ -99,12 +104,16 @@ class ApifyClient:
         location: str = "Italy",
         max_items: int = 30,
     ) -> List[Dict[str, Any]]:
-        """Scrape Indeed for a single query + location."""
+        """Scrape Indeed using curious_coder~indeed-scraper.
+
+        Input schema: position (str), location (str), maxItems (int),
+        country (str: IT/DE/FR/NL etc).
+        """
         input_data = {
-            "query": query,
+            "position": query,
             "location": location,
+            "country": "IT",
             "maxItems": max_items,
-            "startUrls": [],
         }
         results = self._run_actor(INDEED_ACTOR, input_data)
         print(f"[apify:indeed] '{query}' in {location}: {len(results)} results")
