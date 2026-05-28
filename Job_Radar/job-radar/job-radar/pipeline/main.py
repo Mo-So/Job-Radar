@@ -163,6 +163,11 @@ def main() -> int:
     score.score_jobs(cv_text, jobs)
     print(f"[main] scored. top={jobs[0].fit_score} / bottom={jobs[-1].fit_score}")
 
+    # Enrich with seniority, contract type, description snippet
+    for j in jobs:
+        normalize.enrich(j)
+    print(f"[main] enriched {len(jobs)} jobs")
+
     min_fit = cfg.get("min_fit_score", 30)
     jobs = [j for j in jobs if j.fit_score >= min_fit]
     print(f"[main] after fit_score >= {min_fit}: {len(jobs)} jobs")
