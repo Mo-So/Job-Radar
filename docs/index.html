@@ -1,0 +1,809 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Job Radar</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0a0a0f;
+  --surface: #111118;
+  --surface2: #1a1a24;
+  --border: #2a2a3a;
+  --accent: #5b8fff;
+  --accent2: #3dffa0;
+  --accent3: #ff6b6b;
+  --text: #e8e8f0;
+  --text2: #8888aa;
+  --text3: #55556a;
+  --font-display: 'Syne', sans-serif;
+  --font-mono: 'IBM Plex Mono', monospace;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: var(--bg); color: var(--text); font-family: var(--font-display); min-height: 100vh; display: flex; }
+
+/* Sidebar */
+.sidebar {
+  width: 220px; flex-shrink: 0; background: var(--surface);
+  border-right: 1px solid var(--border); display: flex; flex-direction: column;
+  position: fixed; top: 0; left: 0; height: 100vh; z-index: 100; padding: 0 0 24px;
+}
+.logo {
+  padding: 24px 20px 20px; border-bottom: 1px solid var(--border);
+  font-size: 18px; font-weight: 800; letter-spacing: -0.5px;
+}
+.logo span { color: var(--accent); }
+.logo small { display: block; font-size: 11px; color: var(--text3); font-weight: 400; margin-top: 2px; font-family: var(--font-mono); }
+.nav { flex: 1; padding: 12px 10px; display: flex; flex-direction: column; gap: 2px; }
+.nav-item {
+  display: flex; align-items: center; gap: 10px; padding: 9px 12px;
+  border-radius: 8px; cursor: pointer; font-size: 13.5px; font-weight: 600;
+  color: var(--text2); transition: all .15s; border: none; background: none; width: 100%; text-align: left;
+}
+.nav-item:hover { background: var(--surface2); color: var(--text); }
+.nav-item.active { background: rgba(91,143,255,.12); color: var(--accent); }
+.nav-item .icon { font-size: 16px; width: 20px; text-align: center; }
+.nav-sep { height: 1px; background: var(--border); margin: 8px 10px; }
+.sidebar-bottom { padding: 12px 10px 0; }
+
+/* Main */
+.main { margin-left: 220px; flex: 1; min-height: 100vh; }
+.tab { display: none; padding: 32px 36px; max-width: 1100px; }
+.tab.active { display: block; }
+.page-title { font-size: 26px; font-weight: 800; margin-bottom: 4px; }
+.page-sub { font-size: 13px; color: var(--text2); margin-bottom: 28px; font-family: var(--font-mono); }
+
+/* Cards */
+.cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 28px; }
+.card {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 18px 20px;
+  position: relative; overflow: hidden;
+}
+.card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: var(--card-accent, var(--accent)); }
+.card-label { font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--text3); margin-bottom: 8px; font-family: var(--font-mono); }
+.card-value { font-size: 30px; font-weight: 800; color: var(--text); }
+.card-sub { font-size: 12px; color: var(--text2); margin-top: 4px; }
+
+/* Table */
+.toolbar { display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; align-items: center; }
+.search-input {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+  padding: 8px 14px; font-size: 13px; color: var(--text); font-family: var(--font-display);
+  flex: 1; min-width: 200px;
+}
+.search-input::placeholder { color: var(--text3); }
+.search-input:focus { outline: 1px solid var(--accent); border-color: var(--accent); }
+select.filter {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+  padding: 8px 12px; font-size: 13px; color: var(--text2); font-family: var(--font-display); cursor: pointer;
+}
+select.filter:focus { outline: 1px solid var(--accent); }
+.table-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+thead th {
+  background: var(--surface2); padding: 11px 14px; text-align: left;
+  font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase;
+  color: var(--text3); border-bottom: 1px solid var(--border); font-family: var(--font-mono);
+  white-space: nowrap;
+}
+tbody tr { border-bottom: 1px solid var(--border); transition: background .1s; cursor: pointer; }
+tbody tr:last-child { border-bottom: none; }
+tbody tr:hover { background: var(--surface2); }
+tbody td { padding: 11px 14px; vertical-align: middle; }
+.score-pill {
+  display: inline-block; padding: 2px 9px; border-radius: 20px; font-family: var(--font-mono);
+  font-size: 12px; font-weight: 500;
+}
+.score-hi { background: rgba(61,255,160,.12); color: var(--accent2); }
+.score-mid { background: rgba(91,143,255,.12); color: var(--accent); }
+.score-lo { background: rgba(255,107,107,.1); color: var(--accent3); }
+.badge {
+  display: inline-block; padding: 2px 8px; border-radius: 6px; font-size: 11px; font-weight: 600;
+  font-family: var(--font-mono); white-space: nowrap;
+}
+.badge-senior { background: rgba(255,107,107,.1); color: var(--accent3); }
+.badge-mid { background: rgba(91,143,255,.1); color: var(--accent); }
+.badge-junior { background: rgba(61,255,160,.1); color: var(--accent2); }
+.badge-unknown { background: var(--surface2); color: var(--text3); }
+.badge-remote { background: rgba(61,255,160,.08); color: var(--accent2); }
+.apply-link {
+  display: inline-block; padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: 600;
+  background: rgba(91,143,255,.15); color: var(--accent); text-decoration: none;
+  border: 1px solid rgba(91,143,255,.2); transition: all .15s;
+}
+.apply-link:hover { background: rgba(91,143,255,.25); }
+.empty-state { text-align: center; padding: 60px 20px; color: var(--text3); font-size: 14px; }
+.empty-state .big { font-size: 36px; margin-bottom: 10px; }
+
+/* Modal */
+.modal-overlay {
+  display: none; position: fixed; inset: 0; background: rgba(0,0,0,.7); z-index: 200;
+  align-items: center; justify-content: center;
+}
+.modal-overlay.open { display: flex; }
+.modal {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 16px;
+  padding: 28px 32px; max-width: 600px; width: 90%; max-height: 80vh; overflow-y: auto;
+}
+.modal h3 { font-size: 18px; font-weight: 800; margin-bottom: 4px; }
+.modal .meta { font-size: 12px; color: var(--text2); margin-bottom: 20px; font-family: var(--font-mono); }
+.modal .desc { font-size: 13.5px; line-height: 1.7; color: var(--text2); white-space: pre-wrap; }
+.modal-close { float: right; background: none; border: none; color: var(--text3); font-size: 22px; cursor: pointer; }
+
+/* Pipeline */
+.run-card {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+  padding: 16px 20px; display: flex; align-items: center; gap: 14px; margin-bottom: 10px;
+}
+.run-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.run-dot.success { background: var(--accent2); box-shadow: 0 0 8px var(--accent2); }
+.run-dot.failure { background: var(--accent3); }
+.run-dot.running { background: #ffb347; animation: pulse 1s infinite; }
+.run-dot.waiting { background: var(--text3); }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+.run-info { flex: 1; }
+.run-name { font-size: 14px; font-weight: 700; }
+.run-meta { font-size: 12px; color: var(--text2); margin-top: 2px; font-family: var(--font-mono); }
+.run-status { font-size: 12px; font-weight: 600; font-family: var(--font-mono); }
+
+/* Buttons */
+.btn {
+  padding: 9px 20px; border-radius: 8px; font-size: 13.5px; font-weight: 700;
+  cursor: pointer; border: none; font-family: var(--font-display); transition: all .15s; display: inline-flex; align-items: center; gap: 6px;
+}
+.btn-primary { background: var(--accent); color: #000; }
+.btn-primary:hover { filter: brightness(1.1); }
+.btn-primary:disabled { opacity: .4; cursor: not-allowed; }
+.btn-ghost { background: transparent; color: var(--text2); border: 1px solid var(--border); }
+.btn-ghost:hover { background: var(--surface2); color: var(--text); }
+.btn-danger { background: rgba(255,107,107,.15); color: var(--accent3); border: 1px solid rgba(255,107,107,.2); }
+
+/* Forms / Settings */
+.form-section { margin-bottom: 28px; }
+.form-label { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--text3); margin-bottom: 8px; display: block; font-family: var(--font-mono); }
+.form-input {
+  width: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+  padding: 10px 14px; font-size: 13.5px; color: var(--text); font-family: var(--font-mono);
+  margin-bottom: 12px;
+}
+.form-input:focus { outline: 1px solid var(--accent); border-color: var(--accent); }
+.form-hint { font-size: 12px; color: var(--text3); margin-top: -8px; margin-bottom: 12px; }
+.alert { padding: 12px 16px; border-radius: 8px; font-size: 13px; margin-bottom: 16px; }
+.alert-success { background: rgba(61,255,160,.08); border: 1px solid rgba(61,255,160,.2); color: var(--accent2); }
+.alert-error { background: rgba(255,107,107,.08); border: 1px solid rgba(255,107,107,.2); color: var(--accent3); }
+.alert-info { background: rgba(91,143,255,.08); border: 1px solid rgba(91,143,255,.2); color: var(--accent); }
+
+/* Config */
+.cfg-section { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px; margin-bottom: 14px; }
+.cfg-title { font-size: 12px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: var(--text3); margin-bottom: 14px; font-family: var(--font-mono); }
+.chip-group { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip {
+  background: var(--surface2); border: 1px solid var(--border); border-radius: 20px;
+  padding: 5px 13px; font-size: 12.5px; cursor: pointer; color: var(--text2); transition: all .15s; font-weight: 600;
+}
+.chip.on { background: rgba(91,143,255,.15); border-color: rgba(91,143,255,.4); color: var(--accent); }
+.tag-wrap {
+  display: flex; flex-wrap: wrap; gap: 6px; background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 8px; padding: 8px 10px; min-height: 42px; cursor: text;
+}
+.tag {
+  background: rgba(91,143,255,.15); color: var(--accent); border-radius: 14px;
+  padding: 3px 10px; font-size: 12px; display: flex; align-items: center; gap: 5px; font-weight: 600;
+}
+.tag button { background: none; border: none; color: var(--accent); cursor: pointer; font-size: 15px; line-height: 1; }
+.tag-input { border: none; outline: none; font-size: 13px; min-width: 140px; flex: 1; color: var(--text); background: transparent; font-family: var(--font-display); }
+.cfg-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px; }
+.cfg-field label { display: block; font-size: 12px; color: var(--text3); margin-bottom: 6px; font-family: var(--font-mono); }
+.range-row { display: flex; align-items: center; gap: 10px; }
+input[type=range] { flex: 1; accent-color: var(--accent); }
+.range-val { font-size: 14px; font-weight: 700; color: var(--accent); min-width: 28px; text-align: right; font-family: var(--font-mono); }
+.yaml-out {
+  background: #0d1117; border-radius: 10px; padding: 16px; font-family: var(--font-mono);
+  font-size: 12px; line-height: 1.7; color: #c9d1d9; white-space: pre-wrap; word-break: break-all;
+  max-height: 320px; overflow-y: auto; display: none; margin-top: 16px;
+  border: 1px solid var(--border);
+}
+.yaml-out.show { display: block; }
+.copy-bar { display: none; justify-content: space-between; align-items: center; margin-top: 8px; }
+.copy-bar.show { display: flex; }
+.copy-bar span { font-size: 12px; color: var(--text3); font-family: var(--font-mono); }
+.divider { height: 1px; background: var(--border); margin: 24px 0; }
+
+/* Pagination */
+.pagination { display: flex; align-items: center; gap: 8px; margin-top: 14px; justify-content: flex-end; }
+.page-btn { background: var(--surface); border: 1px solid var(--border); color: var(--text2); padding: 5px 12px; border-radius: 6px; cursor: pointer; font-size: 13px; font-family: var(--font-display); }
+.page-btn:disabled { opacity: .3; cursor: not-allowed; }
+.page-info { font-size: 12px; color: var(--text3); font-family: var(--font-mono); }
+
+/* Loading */
+.spinner { display: inline-block; width: 18px; height: 18px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin .7s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Toggle */
+.toggle-row { display: flex; align-items: center; justify-content: space-between; padding: 7px 0; }
+.toggle-label-wrap .tl { font-size: 13.5px; font-weight: 600; }
+.toggle-label-wrap .td { font-size: 11.5px; color: var(--text3); font-family: var(--font-mono); }
+.toggle { position: relative; width: 38px; height: 22px; flex-shrink: 0; }
+.toggle input { opacity: 0; width: 0; height: 0; position: absolute; }
+.slider { position: absolute; inset: 0; background: var(--border); border-radius: 22px; cursor: pointer; transition: .2s; }
+.slider:before { content: ''; position: absolute; width: 16px; height: 16px; left: 3px; top: 3px; background: #fff; border-radius: 50%; transition: .2s; }
+input:checked + .slider { background: var(--accent); }
+input:checked + .slider:before { transform: translateX(16px); }
+
+/* Source dot */
+.src-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 5px; }
+.src-adzuna { background: #ff8c42; }
+.src-arbeitnow { background: #a78bfa; }
+.src-remotive { background: #34d399; }
+.src-jsearch { background: var(--accent); }
+.src-apify { background: #fb7185; }
+
+@media (max-width: 900px) {
+  .sidebar { width: 60px; }
+  .sidebar .logo, .nav-item span { display: none; }
+  .main { margin-left: 60px; }
+  .cards { grid-template-columns: repeat(2,1fr); }
+  .tab { padding: 24px 18px; }
+}
+</style>
+</head>
+<body>
+
+<nav class="sidebar">
+  <div class="logo">Job<span>Radar</span><small>dashboard v3</small></div>
+  <div class="nav">
+    <button class="nav-item active" onclick="showTab('overview')"><span class="icon">◈</span><span>Overview</span></button>
+    <button class="nav-item" onclick="showTab('jobs')"><span class="icon">⊞</span><span>Jobs</span></button>
+    <button class="nav-item" onclick="showTab('pipeline')"><span class="icon">⚡</span><span>Pipeline</span></button>
+    <div class="nav-sep"></div>
+    <button class="nav-item" onclick="showTab('config')"><span class="icon">⊛</span><span>Config</span></button>
+    <button class="nav-item" onclick="showTab('settings')"><span class="icon">⊙</span><span>Settings</span></button>
+  </div>
+</nav>
+
+<main class="main">
+
+<!-- OVERVIEW -->
+<div class="tab active" id="tab-overview">
+  <div class="page-title">Overview</div>
+  <div class="page-sub" id="overview-sub">Loading your job archive...</div>
+  <div class="cards" id="stat-cards">
+    <div class="card" style="--card-accent:var(--accent)"><div class="card-label">Total Jobs</div><div class="card-value" id="stat-total">—</div><div class="card-sub">in archive</div></div>
+    <div class="card" style="--card-accent:var(--accent2)"><div class="card-label">Avg Fit Score</div><div class="card-value" id="stat-avg">—</div><div class="card-sub">out of 100</div></div>
+    <div class="card" style="--card-accent:#a78bfa"><div class="card-label">Top Score</div><div class="card-value" id="stat-top">—</div><div class="card-sub">best match</div></div>
+    <div class="card" style="--card-accent:var(--accent3)"><div class="card-label">Remote Jobs</div><div class="card-value" id="stat-remote">—</div><div class="card-sub">available remotely</div></div>
+  </div>
+  <div style="font-size:13px;font-weight:700;margin-bottom:12px;color:var(--text2)">TOP 10 MATCHES THIS WEEK</div>
+  <div id="overview-jobs"><div class="empty-state"><div class="big">◈</div>Configure your settings first, then load data.</div></div>
+</div>
+
+<!-- JOBS -->
+<div class="tab" id="tab-jobs">
+  <div class="page-title">Job Archive</div>
+  <div class="page-sub">All collected jobs — click any row for full description</div>
+  <div class="toolbar">
+    <input class="search-input" id="job-search" placeholder="Search title, company, location..." oninput="filterJobs()">
+    <select class="filter" id="f-source" onchange="filterJobs()">
+      <option value="">All sources</option>
+      <option value="adzuna">Adzuna</option>
+      <option value="arbeitnow">Arbeitnow</option>
+      <option value="remotive">Remotive</option>
+      <option value="jsearch">JSearch (LinkedIn+)</option>
+      <option value="apify">Apify (LinkedIn)</option>
+    </select>
+    <select class="filter" id="f-seniority" onchange="filterJobs()">
+      <option value="">All levels</option>
+      <option value="Junior">Junior</option>
+      <option value="Mid">Mid</option>
+      <option value="Senior">Senior</option>
+      <option value="Unknown">Unknown</option>
+    </select>
+    <select class="filter" id="f-remote" onchange="filterJobs()">
+      <option value="">Any location</option>
+      <option value="true">Remote only</option>
+      <option value="false">On-site only</option>
+    </select>
+    <select class="filter" id="f-contract" onchange="filterJobs()">
+      <option value="">Any contract</option>
+      <option value="Full-time">Full-time</option>
+      <option value="Part-time">Part-time</option>
+      <option value="Contract">Contract</option>
+      <option value="Internship">Internship</option>
+    </select>
+    <button class="btn btn-ghost" onclick="loadJobs(true)">↻ Refresh</button>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Score</th><th>Title</th><th>Company</th><th>Location</th>
+          <th>Level</th><th>Contract</th><th>Source</th><th>Posted</th><th>Apply</th>
+        </tr>
+      </thead>
+      <tbody id="jobs-tbody"><tr><td colspan="9"><div class="empty-state"><div class="big">⊞</div>Load your Google Sheet data in Settings first.</div></td></tr></tbody>
+    </table>
+  </div>
+  <div class="pagination">
+    <span class="page-info" id="page-info"></span>
+    <button class="page-btn" id="btn-prev" onclick="changePage(-1)" disabled>← Prev</button>
+    <button class="page-btn" id="btn-next" onclick="changePage(1)" disabled>Next →</button>
+  </div>
+</div>
+
+<!-- PIPELINE -->
+<div class="tab" id="tab-pipeline">
+  <div class="page-title">Pipeline</div>
+  <div class="page-sub">Trigger runs and monitor your GitHub Actions workflow</div>
+  <div id="pipeline-alert"></div>
+  <div style="display:flex;gap:12px;margin-bottom:24px;flex-wrap:wrap">
+    <button class="btn btn-primary" id="trigger-btn" onclick="triggerRun()">⚡ Run Scan Now</button>
+    <button class="btn btn-ghost" onclick="loadRuns()">↻ Refresh Status</button>
+  </div>
+  <div style="font-size:12px;font-weight:700;letter-spacing:.07em;color:var(--text3);margin-bottom:12px;font-family:var(--font-mono)">RECENT RUNS</div>
+  <div id="runs-list"><div class="empty-state"><div class="big">⚡</div>Configure GitHub settings first.</div></div>
+</div>
+
+<!-- CONFIG -->
+<div class="tab" id="tab-config">
+  <div class="page-title">Search Config</div>
+  <div class="page-sub">Generate your searches.yaml — paste into config/searches.yaml on GitHub</div>
+
+  <div class="cfg-section">
+    <div class="cfg-title">🔍 Job Keywords</div>
+    <div class="tag-wrap" id="cfg-tags" onclick="document.getElementById('cfg-kw-input').focus()"></div>
+    <input id="cfg-kw-input" class="tag-input" style="margin-top:8px;width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:7px 10px;" placeholder="Type keyword + Enter to add..." onkeydown="addKw(event)">
+  </div>
+
+  <div class="cfg-section">
+    <div class="cfg-title">📍 Target Countries</div>
+    <div class="chip-group" id="cfg-countries">
+      <div class="chip on" data-val="it">🇮🇹 Italy</div>
+      <div class="chip on" data-val="de">🇩🇪 Germany</div>
+      <div class="chip on" data-val="nl">🇳🇱 Netherlands</div>
+      <div class="chip" data-val="fr">🇫🇷 France</div>
+      <div class="chip" data-val="gb">🇬🇧 UK</div>
+      <div class="chip" data-val="es">🇪🇸 Spain</div>
+      <div class="chip" data-val="be">🇧🇪 Belgium</div>
+      <div class="chip" data-val="ch">🇨🇭 Switzerland</div>
+    </div>
+  </div>
+
+  <div class="cfg-section">
+    <div class="cfg-title">🎯 Experience Level</div>
+    <div class="chip-group" id="cfg-exp">
+      <div class="chip on" data-val="Junior">Junior</div>
+      <div class="chip on" data-val="Mid">Mid</div>
+      <div class="chip on" data-val="Senior">Senior</div>
+      <div class="chip on" data-val="Unknown">Not specified</div>
+    </div>
+  </div>
+
+  <div class="cfg-section">
+    <div class="cfg-title">📄 Contract Type</div>
+    <div class="chip-group" id="cfg-contract">
+      <div class="chip on" data-val="Full-time">Full-time</div>
+      <div class="chip on" data-val="Part-time">Part-time</div>
+      <div class="chip on" data-val="Contract">Contract</div>
+      <div class="chip on" data-val="Internship">Internship</div>
+      <div class="chip on" data-val="">Not stated</div>
+    </div>
+  </div>
+
+  <div class="cfg-section">
+    <div class="cfg-title">⚙️ Scoring</div>
+    <div class="cfg-row">
+      <div class="cfg-field"><label>Min fit score</label><div class="range-row"><input type="range" min="0" max="80" value="35" id="cfg-fit" oninput="document.getElementById('fit-v').textContent=this.value"><span class="range-val" id="fit-v">35</span></div></div>
+      <div class="cfg-field"><label>Max days old</label><div class="range-row"><input type="range" min="1" max="30" value="7" id="cfg-days" oninput="document.getElementById('days-v').textContent=this.value"><span class="range-val" id="days-v">7</span></div></div>
+    </div>
+  </div>
+
+  <div class="cfg-section">
+    <div class="cfg-title">🔌 Sources</div>
+    <div class="toggle-row"><div class="toggle-label-wrap"><div class="tl">Adzuna</div><div class="td">Free · daily</div></div><label class="toggle"><input type="checkbox" id="src-adz" checked><span class="slider"></span></label></div>
+    <div class="toggle-row"><div class="toggle-label-wrap"><div class="tl">Arbeitnow + Remotive</div><div class="td">Free · daily</div></div><label class="toggle"><input type="checkbox" id="src-free" checked><span class="slider"></span></label></div>
+    <div class="toggle-row"><div class="toggle-label-wrap"><div class="tl">JSearch (LinkedIn + Indeed + Glassdoor)</div><div class="td">500 calls/month free · every other day</div></div><label class="toggle"><input type="checkbox" id="src-js" checked><span class="slider"></span></label></div>
+    <div class="toggle-row"><div class="toggle-label-wrap"><div class="tl">Apify LinkedIn scraper</div><div class="td">$5 free credit/month · Mon + Thu</div></div><label class="toggle"><input type="checkbox" id="src-ap" checked><span class="slider"></span></label></div>
+  </div>
+
+  <div style="display:flex;gap:10px">
+    <button class="btn btn-primary" onclick="generateYaml()">⊛ Generate searches.yaml</button>
+    <button class="btn btn-ghost" onclick="resetConfig()">↺ Reset</button>
+  </div>
+  <div class="yaml-out" id="yaml-out"></div>
+  <div class="copy-bar" id="copy-bar">
+    <span>→ paste into config/searches.yaml on GitHub</span>
+    <button class="btn btn-ghost" style="font-size:12px;padding:5px 12px" onclick="copyYaml()">Copy</button>
+  </div>
+</div>
+
+<!-- SETTINGS -->
+<div class="tab" id="tab-settings">
+  <div class="page-title">Settings</div>
+  <div class="page-sub">Credentials are stored in your browser only — never sent anywhere except the APIs listed.</div>
+  <div id="settings-alert"></div>
+
+  <div class="form-section">
+    <div style="font-size:15px;font-weight:800;margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid var(--border)">GitHub</div>
+    <label class="form-label">Repository Owner (your GitHub username)</label>
+    <input class="form-input" id="gh-owner" placeholder="e.g. Mo-So">
+    <label class="form-label">Repository Name</label>
+    <input class="form-input" id="gh-repo" placeholder="e.g. Job-Radar">
+    <label class="form-label">Personal Access Token (PAT)</label>
+    <input class="form-input" id="gh-token" type="password" placeholder="ghp_xxxxxxxxxxxx">
+    <div class="form-hint">Needs <code>workflow</code> scope. Create at github.com → Settings → Developer settings → Personal access tokens → Tokens (classic).</div>
+  </div>
+
+  <div class="form-section">
+    <div style="font-size:15px;font-weight:800;margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid var(--border)">Google Sheets</div>
+    <label class="form-label">Sheet ID</label>
+    <input class="form-input" id="gs-id" placeholder="1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms">
+    <label class="form-label">Google API Key (for read-only sheet access)</label>
+    <input class="form-input" id="gs-key" type="password" placeholder="AIzaSy...">
+    <div class="form-hint">Create a read-only API key at console.cloud.google.com → APIs & Services → Credentials → Create credentials → API key. Also set your sheet to "Anyone with link can view".</div>
+  </div>
+
+  <div style="display:flex;gap:10px">
+    <button class="btn btn-primary" onclick="saveSettings()">⊙ Save Settings</button>
+    <button class="btn btn-danger" onclick="clearSettings()">Clear All</button>
+  </div>
+</div>
+
+</main>
+
+<!-- Job detail modal -->
+<div class="modal-overlay" id="job-modal" onclick="closeModal(event)">
+  <div class="modal">
+    <button class="modal-close" onclick="document.getElementById('job-modal').classList.remove('open')">×</button>
+    <h3 id="modal-title"></h3>
+    <div class="meta" id="modal-meta"></div>
+    <div class="desc" id="modal-desc"></div>
+    <div style="margin-top:20px">
+      <a id="modal-apply" href="#" target="_blank" class="btn btn-primary" style="text-decoration:none">Apply →</a>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── State ─────────────────────────────────────────────────────────────────────
+let allJobs = [];
+let filtered = [];
+let page = 0;
+const PAGE_SIZE = 25;
+
+let keywords = [
+  'HSE specialist','EHS specialist','safety specialist',
+  'sustainability analyst','LCA analyst','carbon accounting',
+  'ESG analyst','environmental engineer','SimaPro',
+  'life cycle assessment','GHG Protocol'
+];
+
+// ── Navigation ────────────────────────────────────────────────────────────────
+function showTab(name) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  event.currentTarget.classList.add('active');
+  if (name === 'pipeline') loadRuns();
+  if (name === 'overview' && allJobs.length === 0) loadJobs();
+  if (name === 'jobs' && allJobs.length === 0) loadJobs();
+}
+
+// ── Settings ──────────────────────────────────────────────────────────────────
+function loadSettings() {
+  ['gh-owner','gh-repo','gh-token','gs-id','gs-key'].forEach(id => {
+    const el = document.getElementById(id);
+    const val = localStorage.getItem('jr_' + id);
+    if (val) el.value = val;
+  });
+}
+function saveSettings() {
+  ['gh-owner','gh-repo','gh-token','gs-id','gs-key'].forEach(id => {
+    localStorage.setItem('jr_' + id, document.getElementById(id).value.trim());
+  });
+  showAlert('settings-alert', 'success', '✓ Settings saved.');
+}
+function clearSettings() {
+  ['gh-owner','gh-repo','gh-token','gs-id','gs-key'].forEach(id => {
+    localStorage.removeItem('jr_' + id);
+    document.getElementById(id).value = '';
+  });
+  showAlert('settings-alert', 'info', 'All settings cleared.');
+}
+function getSetting(id) { return localStorage.getItem('jr_' + id) || ''; }
+
+// ── Load Jobs from Google Sheets ──────────────────────────────────────────────
+async function loadJobs(force = false) {
+  const sheetId = getSetting('gs-id');
+  const apiKey  = getSetting('gs-key');
+  if (!sheetId || !apiKey) {
+    showAlert('settings-alert', 'error', 'Please save your Sheet ID and Google API Key in Settings first.');
+    showTab('settings'); return;
+  }
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/Sheet1?key=${apiKey}`;
+  try {
+    const r = await fetch(url);
+    if (!r.ok) { const e = await r.json(); throw new Error(e.error?.message || r.status); }
+    const data = await r.json();
+    const rows = data.values || [];
+    if (rows.length < 2) { allJobs = []; renderJobs(); renderOverview(); return; }
+    const headers = rows[0];
+    const idx = h => headers.indexOf(h);
+    allJobs = rows.slice(1).map(row => ({
+      hash:     row[idx('hash')] || '',
+      added_at: row[idx('added_at')] || '',
+      source:   row[idx('source')] || '',
+      title:    row[idx('title')] || '',
+      company:  row[idx('company')] || '',
+      location: row[idx('location')] || '',
+      remote:   row[idx('remote')] === 'TRUE',
+      posted_date: row[idx('posted_date')] || '',
+      fit_score: parseFloat(row[idx('fit_score')]) || 0,
+      seniority: row[idx('seniority')] || '',
+      years_exp: row[idx('years_exp')] || '',
+      contract_type: row[idx('contract_type')] || '',
+      salary:   row[idx('salary')] || '',
+      apply_url: row[idx('apply_url')] || '',
+      raw_query: row[idx('raw_query')] || '',
+      description_snippet: row[idx('description_snippet')] || '',
+      status:   row[idx('status')] || '',
+      notes:    row[idx('notes')] || '',
+    })).filter(j => j.title);
+    allJobs.sort((a,b) => b.fit_score - a.fit_score);
+    filtered = [...allJobs];
+    renderJobs();
+    renderOverview();
+  } catch(e) {
+    console.error(e);
+    document.getElementById('overview-sub').textContent = 'Error loading sheet: ' + e.message;
+  }
+}
+
+// ── Render Overview ───────────────────────────────────────────────────────────
+function renderOverview() {
+  const n = allJobs.length;
+  document.getElementById('stat-total').textContent = n;
+  document.getElementById('overview-sub').textContent = `${n} jobs archived · last refreshed ${new Date().toLocaleTimeString()}`;
+  if (!n) return;
+  const avg = (allJobs.reduce((s,j)=>s+j.fit_score,0)/n).toFixed(1);
+  const top = allJobs[0]?.fit_score?.toFixed(1) || '—';
+  const rem = allJobs.filter(j=>j.remote).length;
+  document.getElementById('stat-avg').textContent = avg;
+  document.getElementById('stat-top').textContent = top;
+  document.getElementById('stat-remote').textContent = rem;
+  const top10 = allJobs.slice(0,10);
+  document.getElementById('overview-jobs').innerHTML = top10.map(j => `
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 18px;margin-bottom:8px;display:flex;align-items:center;gap:14px;cursor:pointer" onclick="openModal(${JSON.stringify(j).split('"').join('&quot;')})">
+      <span class="score-pill ${scoreCls(j.fit_score)}" style="min-width:44px;text-align:center">${j.fit_score.toFixed(0)}</span>
+      <div style="flex:1;min-width:0">
+        <div style="font-weight:700;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${j.title}</div>
+        <div style="font-size:12px;color:var(--text2);margin-top:2px">${j.company} · ${j.location}</div>
+      </div>
+      <span class="badge badge-${j.seniority.toLowerCase()}">${j.seniority || '—'}</span>
+      ${j.remote ? '<span class="badge badge-remote">Remote</span>' : ''}
+    </div>`).join('');
+}
+
+// ── Render Jobs Table ─────────────────────────────────────────────────────────
+function filterJobs() {
+  const q   = document.getElementById('job-search').value.toLowerCase();
+  const src = document.getElementById('f-source').value;
+  const sen = document.getElementById('f-seniority').value;
+  const rem = document.getElementById('f-remote').value;
+  const con = document.getElementById('f-contract').value;
+  filtered = allJobs.filter(j => {
+    if (q && !`${j.title} ${j.company} ${j.location}`.toLowerCase().includes(q)) return false;
+    if (src && !j.source.includes(src)) return false;
+    if (sen && j.seniority !== sen) return false;
+    if (rem !== '' && String(j.remote) !== rem) return false;
+    if (con && j.contract_type !== con) return false;
+    return true;
+  });
+  page = 0;
+  renderJobs();
+}
+
+function renderJobs() {
+  const tbody = document.getElementById('jobs-tbody');
+  const total = filtered.length;
+  if (!total) {
+    tbody.innerHTML = `<tr><td colspan="9"><div class="empty-state"><div class="big">⊞</div>${allJobs.length ? 'No jobs match your filters.' : 'Load data in Settings → save credentials → come back.'}</div></td></tr>`;
+    document.getElementById('page-info').textContent = '';
+    document.getElementById('btn-prev').disabled = true;
+    document.getElementById('btn-next').disabled = true;
+    return;
+  }
+  const start = page * PAGE_SIZE;
+  const end   = Math.min(start + PAGE_SIZE, total);
+  const slice = filtered.slice(start, end);
+  tbody.innerHTML = slice.map(j => `
+    <tr onclick="openModal(${JSON.stringify(j).split('"').join('&quot;')})">
+      <td><span class="score-pill ${scoreCls(j.fit_score)}">${j.fit_score.toFixed(0)}</span></td>
+      <td style="max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:600">${j.title}</td>
+      <td style="color:var(--text2)">${j.company}</td>
+      <td style="color:var(--text2);font-size:12px">${j.location}${j.remote ? ' <span class="badge badge-remote" style="margin-left:4px">Remote</span>' : ''}</td>
+      <td><span class="badge badge-${(j.seniority||'unknown').toLowerCase()}">${j.seniority||'—'}</span>${j.years_exp ? `<span style="font-size:11px;color:var(--text3);margin-left:4px">${j.years_exp}yr</span>` : ''}</td>
+      <td style="font-size:12px;color:var(--text2)">${j.contract_type || '—'}</td>
+      <td style="font-size:12px"><span class="src-dot src-${j.source.split(':')[0]}"></span>${j.source}</td>
+      <td style="font-size:12px;color:var(--text3);font-family:var(--font-mono)">${j.posted_date}</td>
+      <td onclick="event.stopPropagation()"><a class="apply-link" href="${j.apply_url}" target="_blank">Apply</a></td>
+    </tr>`).join('');
+  document.getElementById('page-info').textContent = `${start+1}–${end} of ${total}`;
+  document.getElementById('btn-prev').disabled = page === 0;
+  document.getElementById('btn-next').disabled = end >= total;
+}
+
+function changePage(dir) { page += dir; renderJobs(); window.scrollTo(0, 0); }
+
+function scoreCls(s) { return s >= 65 ? 'score-hi' : s >= 45 ? 'score-mid' : 'score-lo'; }
+
+// ── Job Modal ─────────────────────────────────────────────────────────────────
+function openModal(job) {
+  if (typeof job === 'string') job = JSON.parse(job.split('&quot;').join('"'));
+  document.getElementById('modal-title').textContent = job.title;
+  document.getElementById('modal-meta').textContent =
+    `${job.company} · ${job.location} · ${job.source} · Score: ${job.fit_score.toFixed(1)} · ${job.seniority} · ${job.contract_type || 'contract unspecified'} · Posted: ${job.posted_date}`;
+  document.getElementById('modal-desc').textContent = job.description_snippet || 'No description available.';
+  document.getElementById('modal-apply').href = job.apply_url;
+  document.getElementById('job-modal').classList.add('open');
+}
+function closeModal(e) { if (e.target === e.currentTarget) e.currentTarget.classList.remove('open'); }
+
+// ── Pipeline ──────────────────────────────────────────────────────────────────
+async function loadRuns() {
+  const owner = getSetting('gh-owner');
+  const repo  = getSetting('gh-repo');
+  const token = getSetting('gh-token');
+  if (!owner || !repo || !token) {
+    document.getElementById('runs-list').innerHTML = '<div class="empty-state"><div class="big">⚡</div>Add your GitHub credentials in Settings.</div>';
+    return;
+  }
+  const url = `https://api.github.com/repos/${owner}/${repo}/actions/workflows/daily-scan.yml/runs?per_page=8`;
+  try {
+    const r = await fetch(url, { headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/vnd.github.v3+json' } });
+    if (!r.ok) throw new Error('GitHub API ' + r.status);
+    const data = await r.json();
+    const runs = data.workflow_runs || [];
+    if (!runs.length) { document.getElementById('runs-list').innerHTML = '<div class="empty-state"><div class="big">⚡</div>No runs yet. Trigger one above.</div>'; return; }
+    document.getElementById('runs-list').innerHTML = runs.map(run => {
+      const dotCls = run.conclusion === 'success' ? 'success' : run.conclusion === 'failure' ? 'failure' : run.status === 'in_progress' ? 'running' : 'waiting';
+      const statusText = run.conclusion || run.status;
+      const ts = new Date(run.created_at).toLocaleString();
+      const dur = run.updated_at ? Math.round((new Date(run.updated_at)-new Date(run.created_at))/1000) + 's' : '—';
+      return `<div class="run-card">
+        <div class="run-dot ${dotCls}"></div>
+        <div class="run-info">
+          <div class="run-name">${run.display_title || 'Daily job scan'}</div>
+          <div class="run-meta">${ts} · ${dur} · ${run.head_branch}</div>
+        </div>
+        <span class="run-status" style="color:${dotCls==='success'?'var(--accent2)':dotCls==='failure'?'var(--accent3)':'var(--text3)'}">${statusText}</span>
+        <a href="${run.html_url}" target="_blank" class="btn btn-ghost" style="font-size:12px;padding:5px 10px;margin-left:8px">Logs</a>
+      </div>`;
+    }).join('');
+  } catch(e) {
+    document.getElementById('runs-list').innerHTML = `<div class="alert alert-error">Error: ${e.message}</div>`;
+  }
+}
+
+async function triggerRun() {
+  const owner = getSetting('gh-owner');
+  const repo  = getSetting('gh-repo');
+  const token = getSetting('gh-token');
+  if (!owner || !repo || !token) { showAlert('pipeline-alert','error','Add GitHub credentials in Settings first.'); return; }
+  const btn = document.getElementById('trigger-btn');
+  btn.disabled = true; btn.textContent = '⏳ Triggering...';
+  try {
+    const r = await fetch(`https://api.github.com/repos/${owner}/${repo}/actions/workflows/daily-scan.yml/dispatches`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/vnd.github.v3+json', 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ref: 'main' })
+    });
+    if (r.status === 204) {
+      showAlert('pipeline-alert','success','✓ Run triggered! It will appear in the list in ~15 seconds.');
+      setTimeout(loadRuns, 8000);
+    } else {
+      const e = await r.json();
+      throw new Error(e.message || r.status);
+    }
+  } catch(e) {
+    showAlert('pipeline-alert','error','Error: ' + e.message);
+  } finally {
+    btn.disabled = false; btn.textContent = '⚡ Run Scan Now';
+  }
+}
+
+// ── Config ────────────────────────────────────────────────────────────────────
+function renderKwTags() {
+  const wrap = document.getElementById('cfg-tags');
+  wrap.querySelectorAll('.tag').forEach(t=>t.remove());
+  const inp = document.getElementById('cfg-kw-input');
+  keywords.forEach((kw,i)=>{
+    const t = document.createElement('div'); t.className='tag';
+    t.innerHTML=`${kw}<button onclick="removeKw(${i})">×</button>`;
+    wrap.insertBefore(t, inp);
+  });
+}
+function addKw(e) {
+  if (e.key==='Enter') {
+    e.preventDefault();
+    const v=e.target.value.trim();
+    if(v && !keywords.includes(v)) { keywords.push(v); renderKwTags(); }
+    e.target.value='';
+  }
+}
+function removeKw(i) { keywords.splice(i,1); renderKwTags(); }
+document.querySelectorAll('.chip-group .chip').forEach(c=>c.addEventListener('click',()=>c.classList.toggle('on')));
+function getChips(id) { return [...document.querySelectorAll(`#${id} .chip.on`)].map(c=>c.dataset.val); }
+
+function generateYaml() {
+  const locs = getChips('cfg-countries');
+  const kwList = keywords.map(k=>`  - "${k}"`).join('\n');
+  const expList = getChips('cfg-exp').map(e=>`  - "${e}"`).join('\n');
+  const conList = getChips('cfg-contract').map(c=>`  - "${c}"`).join('\n');
+  const minFit = document.getElementById('cfg-fit').value;
+  const maxDays = document.getElementById('cfg-days').value;
+  const useJs = document.getElementById('src-js').checked;
+  const useAp = document.getElementById('src-ap').checked;
+
+  let adzBlock = '';
+  if (document.getElementById('src-adz').checked && locs.length) {
+    adzBlock = 'adzuna_searches:\n' + locs.map(l=>`  - country: ${l}\n    where: ""\n    queries:\n${kwList}`).join('\n') + '\n\n';
+  }
+  const freeBlock = document.getElementById('src-free').checked ?
+    `remotive_queries:\n  - sustainability\n  - carbon\n  - ESG\n  - environmental\n\narbeitnow_max_pages: 3\n\n` : '';
+  const jsBlock = useJs ? `jsearch_queries:\n${keywords.slice(0,10).map(k=>`  - "${k} ${locs.includes('it')?'Italy':'Europe'}"`).join('\n')}\n\n` : '';
+  const apBlock = useAp ? `apify_linkedin_queries:\n${keywords.slice(0,6).map(k=>`  - "${k}"`).join('\n')}\n\n` : '';
+
+  const yaml = `# Job Radar — searches.yaml
+# Generated by Job Radar Dashboard
+
+cv_file: config/cv.txt
+min_fit_score: ${minFit}
+max_days_old: ${maxDays}
+
+allowed_seniority:
+${expList}
+
+allowed_contract_types:
+${conList}
+
+${adzBlock}${freeBlock}${jsBlock}${apBlock}`.trim();
+
+  const out = document.getElementById('yaml-out');
+  out.textContent = yaml; out.classList.add('show');
+  document.getElementById('copy-bar').classList.add('show');
+}
+
+function copyYaml() {
+  navigator.clipboard.writeText(document.getElementById('yaml-out').textContent).then(()=>{
+    const b = document.querySelector('.copy-bar .btn'); b.textContent='✓ Copied!';
+    setTimeout(()=>b.textContent='Copy',2000);
+  });
+}
+
+function resetConfig() {
+  keywords = ['HSE specialist','EHS specialist','sustainability analyst','LCA analyst','carbon accounting','ESG analyst','environmental engineer','SimaPro','life cycle assessment','GHG Protocol'];
+  renderKwTags();
+  document.querySelectorAll('#cfg-countries .chip').forEach((c,i)=>c.classList.toggle('on',i<3));
+  document.querySelectorAll('#cfg-exp .chip, #cfg-contract .chip').forEach(c=>c.classList.add('on'));
+  document.getElementById('cfg-fit').value=35; document.getElementById('fit-v').textContent=35;
+  document.getElementById('cfg-days').value=7; document.getElementById('days-v').textContent=7;
+  document.getElementById('yaml-out').classList.remove('show');
+  document.getElementById('copy-bar').classList.remove('show');
+}
+
+// ── Utils ─────────────────────────────────────────────────────────────────────
+function showAlert(containerId, type, msg) {
+  const el = document.getElementById(containerId);
+  el.innerHTML = `<div class="alert alert-${type}">${msg}</div>`;
+  setTimeout(()=>el.innerHTML='', 4000);
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+loadSettings();
+renderKwTags();
+loadJobs();
+</script>
+</body>
+</html>
