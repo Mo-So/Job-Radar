@@ -23,8 +23,9 @@ SCOPES = [
 
 HEADERS = [
     "hash", "added_at", "source", "title", "company", "location",
-    "remote", "posted_date", "fit_score", "salary", "apply_url",
-    "raw_query", "status", "notes",
+    "remote", "posted_date", "fit_score", "seniority", "years_exp",
+    "contract_type", "salary", "apply_url", "raw_query",
+    "description_snippet", "status", "notes",
 ]
 
 
@@ -74,10 +75,14 @@ def append(jobs: List[Job]) -> None:
             "TRUE" if j.remote else "FALSE",
             j.posted_date,
             j.fit_score,
+            j.seniority,
+            j.years_exp,
+            j.contract_type,
             j.salary,
             j.apply_url,
             j.raw_query,
-            "",  # status — manually updated in the sheet
+            j.description_snippet,
+            "",  # status
             "",  # notes
         ])
     ws.append_rows(rows, value_input_option="USER_ENTERED")
