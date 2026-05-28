@@ -90,7 +90,7 @@ class ApifyClient:
                 "keywords": keyword,
                 "location": location,
                 "maxResults": max_results,
-                "datePosted": "Past Week",
+                "datePosted": "r604800",
             }
             results = self._run_actor(LINKEDIN_ACTOR, input_data)
             all_results.extend(results)
