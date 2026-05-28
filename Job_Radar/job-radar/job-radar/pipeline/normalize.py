@@ -11,50 +11,14 @@ import hashlib
 import re
 
 
-@dataclass
-class Job:
-    source: str
-    source_id: str
-    title: str
-    company: str
-    location: str
-    remote: bool
-    posted_date: str
-    description: str
-    apply_url: str
-    salary: str = ""
-    raw_query: str = ""
-    fit_score: float = 0.0
-    seniority: str = ""
-    years_exp: str = ""
-    contract_type: str = ""
-    description_snippet: str = ""
+# ── Seniority & contract detection ───────────────────────────────────────────
 
-def hash_key(self) -> str:
-        """Stable dedup hash: company + title + location, normalized."""
-        key = "|".join([
-            self.company.strip().lower(),
-            self.title.strip().lower(),
-            self.location.strip().lower(),
-        ])
-    def enrich(job: Job) -> Job:
-    """Populate derived fields (seniority, contract_type, snippet) in-place."""
-    job.seniority, job.years_exp = detect_seniority(job.title, job.description)
-    job.contract_type = detect_contract(job.title, job.description)
-    job.description_snippet = job.description[:500].strip()
-    return job
-        return hashlib.md5(key.encode("utf-8")).hexdigest()[:16]
-
-
-import re
-
-# ── Seniority detection ───────────────────────────────────────────────────────
 _SENIOR_TITLE = re.compile(
     r'\b(senior|sr\.?|lead|principal|head of|manager|director|expert)\b', re.I)
 _JUNIOR_TITLE = re.compile(
     r'\b(junior|jr\.?|entry.?level|graduate|intern|stage|tirocinio|apprendista)\b', re.I)
 _YEARS_PATTERN = re.compile(
-    r'(\d+)\s*[\+\-–]?\s*(?:to|-|–)\s*(\d+)\s+(?:years?|anni)|'
+    r'(\d+)\s*[\+\-\u2013]?\s*(?:to|-|\u2013)\s*(\d+)\s+(?:years?|anni)|'
     r'(\d+)\s*\+?\s+(?:years?|anni)\s+(?:of\s+)?(?:experience|esperienza)|'
     r'(?:minimum|almeno|at least|minimo)\s+(\d+)\s+(?:years?|anni)|'
     r'(\d+)\s*\+\s*(?:years?|anni)',
@@ -68,15 +32,9 @@ _CONTRACT_PATTERNS = {
 }
 
 
-def detect_seniority(title: str, description: str) -> tuple[str, str]:
-    """Return (seniority_label, years_exp_string).
-
-    seniority_label: "Junior" | "Mid" | "Senior" | "Unknown"
-    years_exp_string: e.g. "3", "5+", "2-4", "" if not found
-    """
+def detect_seniority(title: str, description: str):
+    """Return (seniority_label, years_exp_string)."""
     blob = f"{title} {description[:3000]}"
-
-    # Extract explicit years from description
     years_found = []
     for m in _YEARS_PATTERN.finditer(blob):
         for g in m.groups():
@@ -97,7 +55,6 @@ def detect_seniority(title: str, description: str) -> tuple[str, str]:
         else:
             seniority = "Senior"
 
-    # Title keyword override (stronger signal)
     if _SENIOR_TITLE.search(title):
         seniority = "Senior"
     elif _JUNIOR_TITLE.search(title):
@@ -107,13 +64,53 @@ def detect_seniority(title: str, description: str) -> tuple[str, str]:
 
 
 def detect_contract(title: str, description: str) -> str:
-    """Detect contract type from title and description."""
     blob = f"{title} {description[:2000]}"
     for label, pattern in _CONTRACT_PATTERNS.items():
         if pattern.search(blob):
             return label
     return ""
 
+
+# ── Job dataclass ─────────────────────────────────────────────────────────────
+
+@dataclass
+class Job:
+    source: str
+    source_id: str
+    title: str
+    company: str
+    location: str
+    remote: bool
+    posted_date: str
+    description: str
+    apply_url: str
+    salary: str = ""
+    raw_query: str = ""
+    fit_score: float = 0.0
+    seniority: str = ""
+    years_exp: str = ""
+    contract_type: str = ""
+    description_snippet: str = ""
+
+    def hash_key(self) -> str:
+        """Stable dedup hash: company + title + location, normalized."""
+        key = "|".join([
+            self.company.strip().lower(),
+            self.title.strip().lower(),
+            self.location.strip().lower(),
+        ])
+        return hashlib.md5(key.encode("utf-8")).hexdigest()[:16]
+
+
+def enrich(job: Job) -> Job:
+    """Populate derived fields (seniority, contract_type, snippet) in-place."""
+    job.seniority, job.years_exp = detect_seniority(job.title, job.description)
+    job.contract_type = detect_contract(job.title, job.description)
+    job.description_snippet = job.description[:500].strip()
+    return job
+
+
+# ── Helpers ───────────────────────────────────────────────────────────────────
 
 def _strip_html(text: str) -> str:
     if not text:
@@ -144,6 +141,8 @@ def _adzuna_salary(raw: dict) -> str:
     val = smin or smax
     return f"{int(val):,}{suffix}"
 
+
+# ── Per-source normalizers ────────────────────────────────────────────────────
 
 def from_adzuna(raw: dict, query: str = "") -> Optional[Job]:
     try:
@@ -192,27 +191,14 @@ def from_arbeitnow(raw: dict) -> Optional[Job]:
 
 
 def from_jsearch(raw: dict, query: str = "") -> Optional[Job]:
-    """Normalize a JSearch result (covers LinkedIn, Indeed, Glassdoor, etc.).
-
-    JSearch includes a `job_apply_link` (direct apply) and separately
-    `job_google_link` as a fallback. We prefer the direct link.
-    The `employer_name` field maps to company; `job_employment_type` gives
-    contract type. `job_is_remote` is a boolean flag.
-    """
     try:
         title = (raw.get("job_title") or "").strip()
         company = (raw.get("employer_name") or "").strip()
         city = raw.get("job_city") or ""
         country = raw.get("job_country") or ""
         location = ", ".join(filter(None, [city, country])).strip()
-        description = _strip_html(
-            (raw.get("job_description") or "")
-        )
-        apply_url = (
-            raw.get("job_apply_link")
-            or raw.get("job_google_link")
-            or ""
-        )
+        description = _strip_html(raw.get("job_description") or "")
+        apply_url = raw.get("job_apply_link") or raw.get("job_google_link") or ""
         posted_at = raw.get("job_posted_at_datetime_utc") or ""
         posted_date = posted_at[:10] if posted_at else ""
         source_platform = raw.get("job_publisher") or "jsearch"
@@ -244,12 +230,9 @@ def from_jsearch(raw: dict, query: str = "") -> Optional[Job]:
 
 
 def from_apify_linkedin(raw: dict) -> Optional[Job]:
-    """Normalize an Apify LinkedIn Jobs scraper result."""
     try:
         location = (raw.get("location") or raw.get("place") or "").strip()
-        description = _strip_html(
-            raw.get("description") or raw.get("descriptionHtml") or ""
-        )
+        description = _strip_html(raw.get("description") or raw.get("descriptionHtml") or "")
         return Job(
             source="apify:linkedin",
             source_id=str(raw.get("id") or raw.get("jobId") or ""),
@@ -268,31 +251,6 @@ def from_apify_linkedin(raw: dict) -> Optional[Job]:
         return None
 
 
-def from_apify_indeed(raw: dict, query: str = "") -> Optional[Job]:
-    """Normalize an Apify Indeed scraper result."""
-    try:
-        location = (raw.get("location") or "").strip()
-        description = _strip_html(
-            raw.get("description") or raw.get("jobDescription") or ""
-        )
-        return Job(
-            source="apify:indeed",
-            source_id=str(raw.get("id") or raw.get("jobId") or ""),
-            title=(raw.get("positionName") or raw.get("title") or "").strip(),
-            company=(raw.get("company") or "").strip(),
-            location=location,
-            remote=_detect_remote(location, description),
-            posted_date=(raw.get("postedAt") or "")[:10],
-            description=description,
-            apply_url=raw.get("url") or raw.get("externalApplyLink") or "",
-            salary=raw.get("salary") or "",
-            raw_query=query,
-        )
-    except Exception as e:
-        print(f"[normalize] apify:indeed error: {e}")
-        return None
-
-
 def from_remotive(raw: dict, query: str = "") -> Optional[Job]:
     try:
         return Job(
@@ -301,7 +259,7 @@ def from_remotive(raw: dict, query: str = "") -> Optional[Job]:
             title=(raw.get("title") or "").strip(),
             company=(raw.get("company_name") or "").strip(),
             location=(raw.get("candidate_required_location") or "Worldwide").strip(),
-            remote=True,  # Remotive is remote-only
+            remote=True,
             posted_date=(raw.get("publication_date") or "")[:10],
             description=_strip_html(raw.get("description") or ""),
             apply_url=raw.get("url") or "",
