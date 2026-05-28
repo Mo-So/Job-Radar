@@ -30,21 +30,19 @@ class Job:
     contract_type: str = ""
     description_snippet: str = ""
 
-def enrich(job: "Job") -> "Job":
-    """Populate derived fields (seniority, contract_type, snippet) in-place."""
-    job.seniority, job.years_exp = detect_seniority(job.title, job.description)
-    job.contract_type = detect_contract(job.title, job.description)
-    job.description_snippet = job.description[:500].strip()
-    return job
-
-
-    def hash_key(self) -> str:
+def hash_key(self) -> str:
         """Stable dedup hash: company + title + location, normalized."""
         key = "|".join([
             self.company.strip().lower(),
             self.title.strip().lower(),
             self.location.strip().lower(),
         ])
+    def enrich(job: Job) -> Job:
+    """Populate derived fields (seniority, contract_type, snippet) in-place."""
+    job.seniority, job.years_exp = detect_seniority(job.title, job.description)
+    job.contract_type = detect_contract(job.title, job.description)
+    job.description_snippet = job.description[:500].strip()
+    return job
         return hashlib.md5(key.encode("utf-8")).hexdigest()[:16]
 
 
