@@ -65,3 +65,45 @@ remotive_queries:
 
 # Arbeitnow: no query support (returns latest EU jobs); we filter via fit score.
 arbeitnow_max_pages: 3
+
+# ---------------------------------------------------------------------------
+# JSearch (RapidAPI) — aggregates LinkedIn, Indeed, Glassdoor, ZipRecruiter.
+# Free tier: 500 calls/month. Pipeline runs this every OTHER day (~225/month).
+# Sign up: https://rapidapi.com/letscrape-6bRBa3QguO5/api/jsearch
+# Add RAPIDAPI_KEY as a GitHub secret to enable.
+# ---------------------------------------------------------------------------
+jsearch_queries:
+  - "HSE specialist Italy"
+  - "EHS specialist Italy"
+  - "safety specialist Italy"
+  - "sustainability analyst Italy"
+  - "sustainability specialist Italy remote"
+  - "LCA analyst Europe remote"
+  - "life cycle assessment Europe"
+  - "carbon accounting specialist Europe"
+  - "ESG analyst Italy"
+  - "SimaPro specialist Europe"
+  - "environmental engineer Italy"
+  - "CSRD sustainability analyst Europe"
+  - "GHG emissions analyst Europe"
+  - "carbon footprint analyst remote Europe"
+  - "ISO 14001 environmental specialist Italy"
+
+# ---------------------------------------------------------------------------
+# Apify — deep scrape of LinkedIn and Indeed.
+# Free: $5/month credit. Pipeline runs Apify on Mon + Thu only (~$1.20/month).
+# Sign up: https://apify.com/ → Settings → Integrations → API token.
+# Add APIFY_TOKEN as a GitHub secret to enable. OPTIONAL — pipeline works
+# without it; JSearch already covers most LinkedIn + Indeed listings.
+# ---------------------------------------------------------------------------
+apify_linkedin_queries:
+  - "HSE specialist"
+  - "sustainability analyst"
+  - "LCA analyst"
+  - "carbon accounting"
+  - "ESG analyst"
+  - "environmental engineer"
+
+apify_indeed_queries:
+  - "sustainability HSE Italy"
+  - "LCA carbon footprint Europe"
